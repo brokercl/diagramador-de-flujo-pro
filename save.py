@@ -48,7 +48,8 @@ def guardar_diagrama(nodos, conexiones, pantalla, archivo_actual):
                 "h": n.rect.height,
                 "texto": getattr(n, "texto", ""),
                 "forma": getattr(n, "forma", "rectangulo"),
-                "color": list(getattr(n, "color_base", (173, 216, 230)))
+                "color": list(getattr(n, "color_base", (173, 216, 230))),
+                "angulo": getattr(n, "angulo", 0.0)  # 🌟 NUEVO: Guardamos el ángulo del nodo
             })
             
         lista_conexiones = []
@@ -112,6 +113,9 @@ def cargar_diagrama(pantalla):
                 nuevo.forma = n_data["forma"]
             if "color" in n_data: 
                 nuevo.color_base = tuple(n_data["color"])
+                
+            # 🌟 NUEVO: Cargamos la rotación (0.0 por defecto para compatibilidad)
+            nuevo.angulo = n_data.get("angulo", 0.0)
                 
             n_nodos.append(nuevo)
             

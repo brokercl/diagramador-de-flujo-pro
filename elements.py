@@ -1,6 +1,38 @@
 import pygame
 import math
 
+def rotar_punto(punto, centro, angulo_grados):
+    """Rota un punto alrededor de un centro por un ángulo específico en grados."""
+    angulo_rad = math.radians(angulo_grados)
+    ox, oy = centro
+    px, py = punto
+    qx = ox + math.cos(angulo_rad) * (px - ox) - math.sin(angulo_rad) * (py - oy)
+    qy = oy + math.sin(angulo_rad) * (px - ox) + math.cos(angulo_rad) * (py - oy)
+    return (int(qx), int(qy))
+
+def descifrar_indice(texto, indice_abs):
+    """Traduce un índice absoluto 1D a coordenadas (linea_idx, columna_idx) para textos multilínea."""
+    lineas = texto.split("\n")
+    acumulado = 0
+    for i, linea in enumerate(lineas):
+        # +1 por el caracter '\n' que se pierde en el split (excepto en la última línea)
+        longitud_linea = len(linea) + (1 if i < len(lineas) - 1 else 0)
+        if indice_abs <= acumulado + longitud_linea:
+            return i, min(indice_abs - acumulado, len(linea))
+        acumulado += longitud_linea
+    return len(lineas) - 1, len(lineas[-1]) if lineas else 0
+
+def obtener_coordenadas_local(texto, indice_abs, fuente, ancho_t, pos_local_y, altura_linea):
+    """Calcula la posición (X, Y) local de un cursor dentro de una superficie de texto multilínea centrada."""
+    line_idx, col_idx = descifrar_indice(texto, indice_abs)
+    lineas = texto.split("\n")
+    linea_target = lineas[line_idx] if line_idx < len(lineas) else ""
+    x_linea = (ancho_t - fuente.size(linea_target)[0]) // 2
+    x_offset = fuente.size(linea_target[:col_idx])[0]
+    y_offset = line_idx * altura_linea
+    return x_linea + x_offset, pos_local_y + y_offset
+
+
 class Nodo:
     def __init__(self, x, y, texto="Nodo", forma="rectangulo", w=120, h=60):
         self.rect = pygame.Rect(x - w//2, y - h//2, w, h) 
@@ -13,18 +45,31 @@ class Nodo:
         self.radio_punto_conexion = 6 
         self.modo_interaccion = "resize" 
         
-        # 🌟 Atributos del modelo de selección nativa
+        # Atributos del modelo de selección nativa
         self.indice_cursor = len(self.texto)
         self.indice_seleccion_inicio = len(self.texto)
+        
+        # Atributos de rotación
+        self.angulo = 0.0          
+        self.angulo_offset = 0.0   
+
+    def obtener_punto_rotacion(self):
+        """Retorna las coordenadas de mundo del tirador de rotación superior."""
+        pos_original = (self.rect.centerx, self.rect.top - 25)
+        return rotar_punto(pos_original, self.rect.center, self.angulo)
 
     def obtener_puntos_conexion(self):
-        if self.forma == "texto": return {}
         r = self.rect
-        return {
-            "arriba_izquierda": (int(r.left), int(r.top)), "arriba_centro": (int(r.centerx), int(r.top)), "arriba_derecha": (int(r.right), int(r.top)),
-            "centro_izquierda": (int(r.left), int(r.centery)), "centro_derecha": (int(r.right), int(r.centery)),
-            "abajo_izquierda": (int(r.left), int(r.bottom)), "abajo_centro": (int(r.centerx), int(r.bottom)), "abajo_derecha": (int(r.right), int(r.bottom))
+        centro = r.center
+        puntos_originales = {
+            "arriba_izquierda": (r.left, r.top), "arriba_centro": (r.centerx, r.top), "arriba_derecha": (r.right, r.top),
+            "centro_izquierda": (r.left, r.centery), "centro_derecha": (r.right, r.centery),
+            "abajo_izquierda": (r.left, r.bottom), "abajo_centro": (r.centerx, r.bottom), "abajo_derecha": (r.right, r.bottom)
         }
+        puntos_rotados = {}
+        for nombre, pos in puntos_originales.items():
+            puntos_rotados[nombre] = rotar_punto(pos, centro, self.angulo)
+        return puntos_rotados
 
     def verificar_clic_puntos(self, pos_raton):
         puntos = self.obtener_puntos_conexion()
@@ -45,52 +90,118 @@ class Nodo:
 
     def dibujar(self, pantalla, fuente, camara_offset=(0, 0)):
         ox, oy = camara_offset
-        rect_pantalla = self.rect.move(-ox, -oy)
+        centro_mundo = self.rect.center
+        centro_pantalla = (centro_mundo[0] - ox, centro_mundo[1] - oy)
         
         color = (255, 165, 0) if self.seleccionado else self.color_base
         
+        # --- A. DIBUJAR CUERPO ROTADO ---
         if self.forma == "rectangulo":
-            pygame.draw.rect(pantalla, color, rect_pantalla, border_radius=8)
-            pygame.draw.rect(pantalla, self.color_borde, rect_pantalla, 2, border_radius=8)
-        elif self.forma == "rombo":
-            puntos_rombo = [(rect_pantalla.centerx, rect_pantalla.top), (rect_pantalla.right, rect_pantalla.centery), (rect_pantalla.centerx, rect_pantalla.bottom), (rect_pantalla.left, rect_pantalla.centery)]
-            pygame.draw.polygon(pantalla, color, puntos_rombo)
-            pygame.draw.polygon(pantalla, self.color_borde, puntos_rombo, 2)
-        elif self.forma == "linea":
-            cx, y_inicio, y_fin = rect_pantalla.centerx, rect_pantalla.top + 5, rect_pantalla.bottom - 5
-            pygame.draw.line(pantalla, color, (cx, y_inicio), (cx, y_fin), 4)
-            pygame.draw.rect(pantalla, color, pygame.Rect(cx - 4, y_inicio - 4, 8, 8))
-            pygame.draw.rect(pantalla, color, pygame.Rect(cx - 4, y_fin - 4, 8, 8))
-        elif self.forma == "texto" and (self.seleccionado or self.editando):
-            pygame.draw.rect(pantalla, (200, 200, 200), rect_pantalla, 1)
-
-        color_letras = self.color_base if self.forma == "texto" else (10, 10, 10)
-        superficie_texto = fuente.render(self.texto, True, color_letras)
-        
-        pos_texto = superficie_texto.get_rect(center=(rect_pantalla.centerx, rect_pantalla.bottom + 12) if self.forma == "linea" else rect_pantalla.center)
+            w, h = self.rect.width, self.rect.height
+            surf_shape = pygame.Surface((w + 8, h + 8), pygame.SRCALPHA)
+            rect_local = pygame.Rect(4, 4, w, h)
             
-        # 🌟 1. RENDERIZAR SELECCIÓN AZUL (Parcial o Total)
+            radio_redondeo = min(12, h // 2)
+            
+            pygame.draw.rect(surf_shape, color, rect_local, border_radius=radio_redondeo)
+            pygame.draw.rect(surf_shape, self.color_borde, rect_local, 2, border_radius=radio_redondeo)
+            
+            surf_rotada = pygame.transform.rotate(surf_shape, -self.angulo)
+            pos_dibujo = surf_rotada.get_rect(center=centro_pantalla)
+            pantalla.blit(surf_rotada, pos_dibujo)
+            
+        elif self.forma == "rombo":
+            puntos_rombo = [
+                (self.rect.centerx, self.rect.top),
+                (self.rect.right, self.rect.centery),
+                (self.rect.centerx, self.rect.bottom),
+                (self.rect.left, self.rect.centery)
+            ]
+            puntos_rotados = [rotar_punto(p, centro_mundo, self.angulo) for p in puntos_rombo]
+            puntos_pantalla = [(p[0] - ox, p[1] - oy) for p in puntos_rotados]
+            pygame.draw.polygon(pantalla, color, puntos_pantalla)
+            pygame.draw.polygon(pantalla, self.color_borde, puntos_pantalla, 2)
+            
+        elif self.forma == "linea":
+            p_inicio = rotar_punto((self.rect.centerx, self.rect.top + 5), centro_mundo, self.angulo)
+            p_fin = rotar_punto((self.rect.centerx, self.rect.bottom - 5), centro_mundo, self.angulo)
+            p_ini_p = (p_inicio[0] - ox, p_inicio[1] - oy)
+            p_fin_p = (p_fin[0] - ox, p_fin[1] - oy)
+            pygame.draw.line(pantalla, color, p_ini_p, p_fin_p, 4)
+            pygame.draw.rect(pantalla, color, pygame.Rect(p_ini_p[0] - 4, p_ini_p[1] - 4, 8, 8))
+            pygame.draw.rect(pantalla, color, pygame.Rect(p_fin_p[0] - 4, p_fin_p[1] - 4, 8, 8))
+            
+        elif self.forma == "texto" and (self.seleccionado or self.editando):
+            esquinas = [self.rect.topleft, self.rect.topright, self.rect.bottomright, self.rect.bottomleft]
+            esquinas_rotadas = [rotar_punto(p, centro_mundo, self.angulo) for p in esquinas]
+            puntos_pantalla = [(p[0] - ox, p[1] - oy) for p in esquinas_rotadas]
+            pygame.draw.polygon(pantalla, (200, 200, 200), puntos_pantalla, 1)
+
+        # --- B. RENDERIZAR TEXTO MULTILÍNEA ROTADO ---
+        color_letras = (30, 30, 30) 
+        
+        lineas = self.texto.split("\n")
+        altura_linea = fuente.get_linesize()
+        ancho_max_texto = max([fuente.size(l)[0] for l in lineas]) if lineas else 0
+        alto_total_texto = len(lineas) * altura_linea
+        
+        ancho_t = max(20, ancho_max_texto + 20)
+        alto_t = max(20, alto_total_texto + 10)
+        surf_temp = pygame.Surface((ancho_t, alto_t), pygame.SRCALPHA)
+        
+        pos_local_y = 5
+        
+        # 1. Pintar selección azul segmentada por línea
         sel_inicio = getattr(self, 'indice_seleccion_inicio', self.indice_cursor)
         if self.editando and sel_inicio != self.indice_cursor:
-            idx_min = max(0, min(sel_inicio, self.indice_cursor, len(self.texto)))
-            idx_max = max(0, min(max(sel_inicio, self.indice_cursor), len(self.texto)))
-            
-            x_inicio = pos_texto.left + fuente.size(self.texto[:idx_min])[0]
-            ancho_seleccion = fuente.size(self.texto[idx_min:idx_max])[0]
-            
-            rect_sel = pygame.Rect(x_inicio, pos_texto.top, ancho_seleccion, pos_texto.height)
-            rect_sel.inflate_ip(4, 4)
-            pygame.draw.rect(pantalla, (180, 215, 255), rect_sel, border_radius=3)
+            idx_min = min(sel_inicio, self.indice_cursor)
+            idx_max = max(sel_inicio, self.indice_cursor)
+            line_min, col_min = descifrar_indice(self.texto, idx_min)
+            line_max, col_max = descifrar_indice(self.texto, idx_max)
 
-        pantalla.blit(superficie_texto, pos_texto)
-
-        # 🌟 2. RENDERIZAR CURSOR PARPADEANTE (Solo si NO hay texto seleccionado)
+            for i, linea in enumerate(lineas):
+                y_linea = pos_local_y + i * altura_linea
+                x_linea = (ancho_t - fuente.size(linea)[0]) // 2
+                if line_min <= i <= line_max:
+                    c_ini = col_min if i == line_min else 0
+                    c_fin = col_max if i == line_max else len(linea)
+                    if line_min < i < line_max:
+                        c_ini = 0
+                        c_fin = len(linea)
+                    x_sel_inicio = x_linea + fuente.size(linea[:c_ini])[0]
+                    ancho_sel_linea = fuente.size(linea[c_ini:c_fin])[0]
+                    if ancho_sel_linea == 0 and i < line_max:
+                        ancho_sel_linea = 6 
+                    if ancho_sel_linea > 0:
+                        rect_sel = pygame.Rect(x_sel_inicio, y_linea, ancho_sel_linea, altura_linea)
+                        pygame.draw.rect(surf_temp, (180, 215, 255), rect_sel, border_radius=3)
+        
+        # 2. Renderizar y centrar cada línea individualmente
+        for i, linea in enumerate(lineas):
+            y_linea = pos_local_y + i * altura_linea
+            x_linea = (ancho_t - fuente.size(linea)[0]) // 2
+            superficie_linea = fuente.render(linea, True, color_letras)
+            surf_temp.blit(superficie_linea, (x_linea, y_linea))
+        
+        # 3. Pintar cursor parpadeante en su línea respectiva
         if self.editando and sel_inicio == self.indice_cursor:
             if pygame.time.get_ticks() % 1000 < 500:
-                idx = max(0, min(len(self.texto), self.indice_cursor))
-                cursor_x = pos_texto.left + fuente.size(self.texto[:idx])[0]
-                pygame.draw.line(pantalla, color_letras, (cursor_x, pos_texto.top), (cursor_x, pos_texto.bottom), 2)
+                cursor_x, cursor_y = obtener_coordenadas_local(self.texto, self.indice_cursor, fuente, ancho_t, pos_local_y, altura_linea)
+                pygame.draw.line(surf_temp, color_letras, (cursor_x, cursor_y), (cursor_x, cursor_y + altura_linea), 2)
+        
+        # 4. Rotar el bloque completo
+        surf_rotada = pygame.transform.rotate(surf_temp, -self.angulo)
+        
+        # 5. Dibujar en la pantalla
+        if self.forma == "linea":
+            desplazamiento = rotar_punto((centro_mundo[0], centro_mundo[1] + 12), centro_mundo, self.angulo)
+            pos_texto = surf_rotada.get_rect(center=(desplazamiento[0] - ox, desplazamiento[1] - oy))
+        else:
+            pos_texto = surf_rotada.get_rect(center=centro_pantalla)
+        
+        pantalla.blit(surf_rotada, pos_texto)
 
+        # --- C. DIBUJAR INTERFAZ DE CONTROL ---
         if self.seleccionado or self.editando:
             puntos = self.obtener_puntos_conexion()
             for pos in puntos.values():
@@ -98,18 +209,39 @@ class Nodo:
                 pygame.draw.circle(pantalla, (255, 255, 255), pos_entera, int(self.radio_punto_conexion))
                 pygame.draw.circle(pantalla, (50, 120, 240), pos_entera, int(self.radio_punto_conexion), 2)
             
-            if self.modo_interaccion == "arrow" and self.forma != "texto":
+            # 🌟 CORREGIDO: Eliminamos el 'and self.forma != "texto"' para que el texto sí dibuje sus flechitas
+            if self.modo_interaccion == "arrow":
                 direcciones = {
                     "arriba_izquierda": (-1, -1), "arriba_centro": (0, -1), "arriba_derecha": (1, -1),
                     "centro_izquierda": (-1, 0), "centro_derecha": (1, 0),
                     "abajo_izquierda": (-1, 1), "abajo_centro": (0, 1), "abajo_derecha": (1, 1)
                 }
-                for nombre, pos in puntos.items():
+                r = self.rect
+                puntos_originales = {
+                    "arriba_izquierda": (r.left, r.top), "arriba_centro": (r.centerx, r.top), "arriba_derecha": (r.right, r.top),
+                    "centro_izquierda": (r.left, r.centery), "centro_derecha": (r.right, r.centery),
+                    "abajo_izquierda": (r.left, r.bottom), "abajo_centro": (r.centerx, r.bottom), "abajo_derecha": (r.right, r.bottom)
+                }
+                for nombre, pos_rotada in puntos.items():
                     dx, dy = direcciones[nombre]
-                    pos_pantalla = (pos[0] - ox, pos[1] - oy)
-                    destino_pantalla = (pos_pantalla[0] + dx * 16, pos_pantalla[1] + dy * 16)
+                    pos_orig = puntos_originales[nombre]
+                    destino_orig = (pos_orig[0] + dx * 16, pos_orig[1] + dy * 16)
+                    destino_rotado = rotar_punto(destino_orig, centro_mundo, self.angulo)
+                    
+                    pos_pantalla = (pos_rotada[0] - ox, pos_rotada[1] - oy)
+                    destino_pantalla = (destino_rotado[0] - ox, destino_rotado[1] - oy)
                     self._dibujar_flechita(pantalla, pos_pantalla, destino_pantalla)
 
+            # DIBUJAR MANIJA DE ROTACIÓN "LOLLIPOP"
+            p_base_manija = rotar_punto((self.rect.centerx, self.rect.top), centro_mundo, self.angulo)
+            p_extremo_manija = self.obtener_punto_rotacion()
+            
+            p_base_p = (int(p_base_manija[0] - ox), int(p_base_manija[1] - oy))
+            p_extremo_p = (int(p_extremo_manija[0] - ox), int(p_extremo_manija[1] - oy))
+            
+            pygame.draw.line(pantalla, (100, 100, 100), p_base_p, p_extremo_p, 2)
+            pygame.draw.circle(pantalla, (255, 255, 255), p_extremo_p, 6)
+            pygame.draw.circle(pantalla, (46, 204, 113), p_extremo_p, 6, 2)
 
 class Conexion:
     def __init__(self, nodo_origen, punto_origen, nodo_destino=None, punto_destino=None):
@@ -125,7 +257,7 @@ class Conexion:
         self.editando = False 
         self.color_base = (60, 60, 60)
         
-        # 🌟 Atributos del modelo de selección nativa
+        # Atributos del modelo de selección nativa
         self.indice_cursor = 0
         self.indice_seleccion_inicio = 0
 
@@ -176,32 +308,65 @@ class Conexion:
             pygame.draw.circle(pantalla, (100, 100, 100), pos_vacio_pantalla, 4)
             pygame.draw.circle(pantalla, (245, 245, 245), pos_vacio_pantalla, 2)
             
+        # --- RENDERIZAR TEXTO MULTILÍNEA EN LA FLECHA ---
         if fuente and (self.texto or self.editando):
             centro_x, centro_y = (p_origen[0] + p_destino[0]) // 2, (p_origen[1] + p_destino[1]) // 2
-            surf_texto = fuente.render(self.texto, True, self.color_base)
-            rect_texto = surf_texto.get_rect(center=(centro_x, centro_y - 12)) 
             
-            rect_fondo = rect_texto.inflate(6, 4)
-            pygame.draw.rect(pantalla, (245, 245, 245), rect_fondo)
+            lineas = self.texto.split("\n")
+            altura_linea = fuente.get_linesize()
+            ancho_max_texto = max([fuente.size(l)[0] for l in lineas]) if lineas else 0
+            alto_total_texto = len(lineas) * altura_linea
             
-            # 🌟 1. RENDERIZAR SELECCIÓN AZUL EN LA CONEXIÓN
+            ancho_t = max(20, ancho_max_texto + 20)
+            alto_t = max(20, alto_total_texto + 10)
+            surf_temp = pygame.Surface((ancho_t, alto_t), pygame.SRCALPHA)
+            
+            pos_local_y = 5
+            
+            # Pintar selección azul en la conexión
             sel_inicio = getattr(self, 'indice_seleccion_inicio', self.indice_cursor)
             if self.editando and sel_inicio != self.indice_cursor:
-                idx_min = max(0, min(sel_inicio, self.indice_cursor, len(self.texto)))
-                idx_max = max(0, min(max(sel_inicio, self.indice_cursor), len(self.texto)))
-                x_inicio = rect_texto.left + fuente.size(self.texto[:idx_min])[0]
-                ancho_seleccion = fuente.size(self.texto[idx_min:idx_max])[0]
-                rect_sel = pygame.Rect(x_inicio, rect_texto.top, ancho_seleccion, rect_texto.height)
-                pygame.draw.rect(pantalla, (180, 215, 255), rect_sel, border_radius=3)
-            
-            pantalla.blit(surf_texto, rect_texto)
+                idx_min = min(sel_inicio, self.indice_cursor)
+                idx_max = max(sel_inicio, self.indice_cursor)
+                line_min, col_min = descifrar_indice(self.texto, idx_min)
+                line_max, col_max = descifrar_indice(self.texto, idx_max)
 
-            # 🌟 2. RENDERIZAR CURSOR INTERMEDIO
+                for i, linea in enumerate(lineas):
+                    y_linea = pos_local_y + i * altura_linea
+                    x_linea = (ancho_t - fuente.size(linea)[0]) // 2
+                    if line_min <= i <= line_max:
+                        c_ini = col_min if i == line_min else 0
+                        c_fin = col_max if i == line_max else len(linea)
+                        if line_min < i < line_max:
+                            c_ini = 0
+                            c_fin = len(linea)
+                        x_sel_inicio = x_linea + fuente.size(linea[:c_ini])[0]
+                        ancho_sel_linea = fuente.size(linea[c_ini:c_fin])[0]
+                        if ancho_sel_linea == 0 and i < line_max:
+                            ancho_sel_linea = 6
+                        if ancho_sel_linea > 0:
+                            rect_sel = pygame.Rect(x_sel_inicio, y_linea, ancho_sel_linea, altura_linea)
+                            pygame.draw.rect(surf_temp, (180, 215, 255), rect_sel, border_radius=3)
+            
+            # Renderizar las líneas de texto de la flecha
+            for i, linea in enumerate(lineas):
+                y_linea = pos_local_y + i * altura_linea
+                x_linea = (ancho_t - fuente.size(linea)[0]) // 2
+                superficie_linea = fuente.render(linea, True, self.color_base)
+                surf_temp.blit(superficie_linea, (x_linea, y_linea))
+                
+            # Pintar cursor en su línea respectiva
             if self.editando and sel_inicio == self.indice_cursor:
                 if pygame.time.get_ticks() % 1000 < 500:
-                    idx = max(0, min(len(self.texto), self.indice_cursor))
-                    cursor_x = rect_texto.left + fuente.size(self.texto[:idx])[0]
-                    pygame.draw.line(pantalla, self.color_base, (cursor_x, rect_texto.top), (cursor_x, rect_texto.bottom), 2)
+                    cursor_x, cursor_y = obtener_coordenadas_local(self.texto, self.indice_cursor, fuente, ancho_t, pos_local_y, altura_linea)
+                    pygame.draw.line(surf_temp, self.color_base, (cursor_x, cursor_y), (cursor_x, cursor_y + altura_linea), 2)
+                    
+            # Dibujar el fondo limpio de la conexión
+            rect_texto_pantalla = surf_temp.get_rect(center=(centro_x, centro_y - 12))
+            rect_fondo = rect_texto_pantalla.inflate(6, 4)
+            pygame.draw.rect(pantalla, (245, 245, 245), rect_fondo)
+            
+            pantalla.blit(surf_temp, rect_texto_pantalla)
         
         dx, dy = p_destino[0] - p_origen[0], p_destino[1] - p_origen[1]
         angulo = math.atan2(dy, dx) if (dx != 0 or dy != 0) else 0
