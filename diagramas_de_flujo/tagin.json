@@ -1,0 +1,567 @@
+{
+    "nodos": [
+        {
+            "id": 0,
+            "x": 390,
+            "y": 135,
+            "w": 170,
+            "h": 41,
+            "texto": "load Segments   LS",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 1,
+            "x": 400,
+            "y": 205,
+            "w": 150,
+            "h": 38,
+            "texto": "load porticos   LP",
+            "forma": "rectangulo",
+            "color": [
+                255,
+                255,
+                180
+            ]
+        },
+        {
+            "id": 2,
+            "x": 399,
+            "y": 264,
+            "w": 154,
+            "h": 34,
+            "texto": "valorizar porticos",
+            "forma": "rectangulo",
+            "color": [
+                230,
+                190,
+                255
+            ]
+        },
+        {
+            "id": 3,
+            "x": 399,
+            "y": 331,
+            "w": 154,
+            "h": 39,
+            "texto": "tick",
+            "forma": "rectangulo",
+            "color": [
+                0,
+                159,
+                0
+            ]
+        },
+        {
+            "id": 4,
+            "x": 263,
+            "y": 322,
+            "w": 70,
+            "h": 56,
+            "texto": "hh:mm",
+            "forma": "rombo",
+            "color": [
+                255,
+                200,
+                150
+            ]
+        },
+        {
+            "id": 5,
+            "x": 691,
+            "y": 468,
+            "w": 153,
+            "h": 60,
+            "texto": "LoadVersion(arg)",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 6,
+            "x": 402,
+            "y": 75,
+            "w": 146,
+            "h": 30,
+            "texto": "load Vector Map",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 7,
+            "x": 660,
+            "y": 290,
+            "w": 212,
+            "h": 134,
+            "texto": "NewVersion(hh:mm, arg)",
+            "forma": "rombo",
+            "color": [
+                255,
+                200,
+                150
+            ]
+        },
+        {
+            "id": 8,
+            "x": 411,
+            "y": 390,
+            "w": 133,
+            "h": 73,
+            "texto": "match portico",
+            "forma": "rombo",
+            "color": [
+                255,
+                200,
+                150
+            ]
+        },
+        {
+            "id": 9,
+            "x": 406,
+            "y": 491,
+            "w": 143,
+            "h": 34,
+            "texto": "registrar Portico",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 10,
+            "x": 438,
+            "y": 20,
+            "w": 75,
+            "h": 30,
+            "texto": "init",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 11,
+            "x": 559,
+            "y": 443,
+            "w": 68,
+            "h": 24,
+            "texto": "end",
+            "forma": "rectangulo",
+            "color": [
+                173,
+                216,
+                230
+            ]
+        },
+        {
+            "id": 12,
+            "x": 711,
+            "y": 232,
+            "w": 120,
+            "h": 60,
+            "texto": "Mantenimiento",
+            "forma": "texto",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "id": 13,
+            "x": 238,
+            "y": 219,
+            "w": 120,
+            "h": 60,
+            "texto": "Scheduler",
+            "forma": "texto",
+            "color": [
+                169,
+                47,
+                112
+            ]
+        },
+        {
+            "id": 14,
+            "x": 305,
+            "y": 312,
+            "w": 120,
+            "h": 60,
+            "texto": "hh:00",
+            "forma": "texto",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "id": 15,
+            "x": 306,
+            "y": 334,
+            "w": 120,
+            "h": 60,
+            "texto": "hh:30",
+            "forma": "texto",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "id": 16,
+            "x": 532,
+            "y": 319,
+            "w": 120,
+            "h": 60,
+            "texto": "06:00, arg",
+            "forma": "texto",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "id": 17,
+            "x": 534,
+            "y": 335,
+            "w": 120,
+            "h": 60,
+            "texto": "06:05, arg",
+            "forma": "texto",
+            "color": [
+                0,
+                0,
+                0
+            ]
+        }
+    ],
+    "conexiones": [
+        {
+            "id": 0,
+            "id_origen": 0,
+            "punto_origen": "abajo_centro",
+            "id_destino": 1,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 1,
+            "id_origen": 2,
+            "punto_origen": "abajo_centro",
+            "id_destino": 3,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 2,
+            "id_origen": 6,
+            "punto_origen": "abajo_centro",
+            "id_destino": 0,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 3,
+            "id_origen": 1,
+            "punto_origen": "abajo_centro",
+            "id_destino": 2,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 4,
+            "id_origen": 3,
+            "punto_origen": "abajo_centro",
+            "id_destino": 8,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 5,
+            "id_origen": 8,
+            "punto_origen": "abajo_centro",
+            "id_destino": 9,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                58,
+                15,
+                186
+            ]
+        },
+        {
+            "id": 6,
+            "id_origen": 7,
+            "punto_origen": "abajo_centro",
+            "id_destino": 5,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "Si",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 7,
+            "id_origen": 10,
+            "punto_origen": "abajo_centro",
+            "id_destino": 6,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 8,
+            "id_origen": 8,
+            "punto_origen": "centro_izquierda",
+            "id_destino": -1,
+            "punto_destino": null,
+            "pos_vacio_final": [
+                383,
+                426
+            ],
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                255,
+                150,
+                200
+            ]
+        },
+        {
+            "id": 9,
+            "id_origen": -1,
+            "punto_origen": null,
+            "id_destino": 3,
+            "punto_destino": "abajo_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": 8,
+            "texto": "",
+            "color": [
+                255,
+                150,
+                200
+            ]
+        },
+        {
+            "id": 10,
+            "id_origen": 9,
+            "punto_origen": "centro_izquierda",
+            "id_destino": -1,
+            "punto_destino": null,
+            "pos_vacio_final": [
+                333,
+                499
+            ],
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 11,
+            "id_origen": -1,
+            "punto_origen": null,
+            "id_destino": 3,
+            "punto_destino": "abajo_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": 10,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 12,
+            "id_origen": 3,
+            "punto_origen": "centro_izquierda",
+            "id_destino": 4,
+            "punto_destino": "centro_derecha",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 13,
+            "id_origen": 4,
+            "punto_origen": "arriba_centro",
+            "id_destino": -1,
+            "punto_destino": null,
+            "pos_vacio_final": [
+                298,
+                281
+            ],
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 14,
+            "id_origen": -1,
+            "punto_origen": null,
+            "id_destino": 2,
+            "punto_destino": "centro_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": 13,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 15,
+            "id_origen": 3,
+            "punto_origen": "abajo_derecha",
+            "id_destino": 7,
+            "punto_destino": "centro_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 16,
+            "id_origen": 5,
+            "punto_origen": "arriba_izquierda",
+            "id_destino": 3,
+            "punto_destino": "abajo_derecha",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 17,
+            "id_origen": 3,
+            "punto_origen": "centro_derecha",
+            "id_destino": 7,
+            "punto_destino": "centro_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 18,
+            "id_origen": 3,
+            "punto_origen": "arriba_derecha",
+            "id_destino": 7,
+            "punto_destino": "centro_izquierda",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "05:55, arg",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        },
+        {
+            "id": 19,
+            "id_origen": 3,
+            "punto_origen": "abajo_centro",
+            "id_destino": 11,
+            "punto_destino": "arriba_centro",
+            "pos_vacio_final": null,
+            "id_flecha_madre": -1,
+            "texto": "",
+            "color": [
+                60,
+                60,
+                60
+            ]
+        }
+    ]
+}
