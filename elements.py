@@ -33,6 +33,92 @@ def obtener_coordenadas_local(texto, indice_abs, fuente, ancho_t, pos_local_y, a
     return x_linea + x_offset, pos_local_y + y_offset
 
 
+def obtener_ruta_redondeada(p1, p2, r=15, orientacion="horizontal"):
+    """
+    Genera una secuencia de puntos para una ruta ortogonal con esquinas redondeadas
+    utilizando curvas Bezier en los codos para un acabado vectorial suave.
+    """
+    x1, y1 = p1
+    x2, y2 = p2
+    
+    # Si están prácticamente alineados en algún eje, una línea recta basta
+    if abs(x1 - x2) < 12 or abs(y1 - y2) < 12:
+        return [p1, p2]
+        
+    dx = 1 if x2 > x1 else -1
+    dy = 1 if y2 > y1 else -1
+    
+    if orientacion == "horizontal":
+        x_mid = (x1 + x2) / 2
+        # Limitar dinámicamente el radio de curvatura para evitar colapsos visuales si están muy cerca
+        r = min(r, abs(x_mid - x1) - 1, abs(y2 - y1) / 2 - 1)
+        if r < 4:
+            return [p1, (x_mid, y1), (x_mid, y2), p2]
+            
+        puntos = [p1]
+        
+        # Esquina 1 (Bezier cuadrática: horizontal -> vertical)
+        p0 = (x_mid - dx * r, y1)
+        p1_ctrl = (x_mid, y1)
+        p2_end = (x_mid, y1 + dy * r)
+        
+        puntos.append(p0)
+        for step in range(1, 6):
+            t = step / 5.0
+            bx = (1-t)**2 * p0[0] + 2*(1-t)*t * p1_ctrl[0] + t**2 * p2_end[0]
+            by = (1-t)**2 * p0[1] + 2*(1-t)*t * p1_ctrl[1] + t**2 * p2_end[1]
+            puntos.append((bx, by))
+            
+        # Esquina 2 (Bezier cuadrática: vertical -> horizontal)
+        q0 = (x_mid, y2 - dy * r)
+        q1_ctrl = (x_mid, y2)
+        q2_end = (x_mid + dx * r, y2)
+        
+        puntos.append(q0)
+        for step in range(1, 6):
+            t = step / 5.0
+            qx = (1-t)**2 * q0[0] + 2*(1-t)*t * q1_ctrl[0] + t**2 * q2_end[0]
+            qy = (1-t)**2 * q0[1] + 2*(1-t)*t * q1_ctrl[1] + t**2 * q2_end[1]
+            puntos.append((qx, qy))
+            
+        puntos.append(p2)
+        return puntos
+    else:
+        # Ruta vertical primero (viaja vertical -> horizontal -> vertical)
+        y_mid = (y1 + y2) / 2
+        r = min(r, abs(y_mid - y1) - 1, abs(x2 - x1) / 2 - 1)
+        if r < 4:
+            return [p1, (x1, y_mid), (x2, y_mid), p2]
+            
+        puntos = [p1]
+        
+        # Esquina 1 (Bezier cuadrática: vertical -> horizontal)
+        p0 = (x1, y_mid - dy * r)
+        p1_ctrl = (x1, y_mid)
+        p2_end = (x1 + dx * r, y_mid)
+        
+        puntos.append(p0)
+        for step in range(1, 6):
+            t = step / 5.0
+            bx = (1-t)**2 * p0[0] + 2*(1-t)*t * p1_ctrl[0] + t**2 * p2_end[0]
+            by = (1-t)**2 * p0[1] + 2*(1-t)*t * p1_ctrl[1] + t**2 * p2_end[1]
+            puntos.append((bx, by))
+            
+        # Esquina 2 (Bezier cuadrática: horizontal -> vertical)
+        q0 = (x2 - dx * r, y_mid)
+        q1_ctrl = (x2, y_mid)
+        q2_end = (x2, y_mid + dy * r)
+        
+        puntos.append(q0)
+        for step in range(1, 6):
+            t = step / 5.0
+            qx = (1-t)**2 * q0[0] + 2*(1-t)*t * q1_ctrl[0] + t**2 * q2_end[0]
+            qy = (1-t)**2 * q0[1] + 2*(1-t)*t * q1_ctrl[1] + t**2 * q2_end[1]
+            puntos.append((qx, qy))
+            
+        puntos.append(p2)
+        return puntos
+
 class Nodo:
     def __init__(self, x, y, texto="Nodo", forma="rectangulo", w=120, h=60):
         self.rect = pygame.Rect(x - w//2, y - h//2, w, h) 
@@ -138,7 +224,7 @@ class Nodo:
             pygame.draw.polygon(pantalla, (200, 200, 200), puntos_pantalla, 1)
 
         # --- B. RENDERIZAR TEXTO MULTILÍNEA ROTADO ---
-        color_letras = (30, 30, 30) 
+        color_letras = self.color_base if self.forma == "texto" else (30, 30, 30) 
         
         lineas = self.texto.split("\n")
         altura_linea = fuente.get_linesize()
@@ -244,7 +330,7 @@ class Nodo:
             pygame.draw.circle(pantalla, (46, 204, 113), p_extremo_p, 6, 2)
 
 class Conexion:
-    def __init__(self, nodo_origen, punto_origen, nodo_destino=None, punto_destino=None):
+    def __init__(self, nodo_origen, punto_origen, nodo_destino=None, punto_destino=None, tipo="recta"):
         self.origen = nodo_origen          
         self.punto_origen = punto_origen   
         self.destino = nodo_destino        
@@ -256,6 +342,7 @@ class Conexion:
         self.texto = ""  
         self.editando = False 
         self.color_base = (60, 60, 60)
+        self.tipo = tipo  # 🌟 "recta" o "redondeada"
         
         # Atributos del modelo de selección nativa
         self.indice_cursor = 0
@@ -301,7 +388,21 @@ class Conexion:
         
         p_origen = (puntos[0][0] - ox, puntos[0][1] - oy)
         p_destino = (puntos[1][0] - ox, puntos[1][1] - oy)
-        pygame.draw.line(pantalla, COLOR_LINEA, p_origen, p_destino, GROSOR)
+        
+        # 🌟 NUEVO: Ruteo inteligente basado en la dirección de salida del puerto
+        orientacion = "horizontal"
+        if self.punto_origen and ("arriba" in self.punto_origen or "abajo" in self.punto_origen):
+            orientacion = "vertical"
+            
+        # 🌟 NUEVO: Generamos la ruta (recta o con curvas ortogonales de Bezier)
+        if getattr(self, "tipo", "recta") == "redondeada":
+            puntos_linea = obtener_ruta_redondeada(p_origen, p_destino, r=15, orientacion=orientacion)
+        else:
+            puntos_linea = [p_origen, p_destino]
+            
+        # Dibujar el trazado completo (soporta N segmentos curvados)
+        if len(puntos_linea) >= 2:
+            pygame.draw.lines(pantalla, COLOR_LINEA, False, puntos_linea, GROSOR)
         
         if self.pos_vacio_final and not self.seleccionada:
             pos_vacio_pantalla = (self.pos_vacio_final[0] - ox, self.pos_vacio_final[1] - oy)
@@ -310,6 +411,7 @@ class Conexion:
             
         # --- RENDERIZAR TEXTO MULTILÍNEA EN LA FLECHA ---
         if fuente and (self.texto or self.editando):
+            # Posición en el centro físico de la caja delimitadora
             centro_x, centro_y = (p_origen[0] + p_destino[0]) // 2, (p_origen[1] + p_destino[1]) // 2
             
             lineas = self.texto.split("\n")
@@ -368,10 +470,15 @@ class Conexion:
             
             pantalla.blit(surf_temp, rect_texto_pantalla)
         
-        dx, dy = p_destino[0] - p_origen[0], p_destino[1] - p_origen[1]
+        # 🌟 NUEVO: Calculamos la orientación de la punta de la flecha usando el ÚLTIMO segmento
+        p_penultimo = puntos_linea[-2]
+        p_ultimo = puntos_linea[-1]
+        dx = p_ultimo[0] - p_penultimo[0]
+        dy = p_ultimo[1] - p_penultimo[1]
+        
         angulo = math.atan2(dy, dx) if (dx != 0 or dy != 0) else 0
         LARGO_FLECHA, ANGULO_ALAS = 12, math.radians(25)
         
-        flecha_ala1 = (p_destino[0] - LARGO_FLECHA * math.cos(angulo - ANGULO_ALAS), p_destino[1] - LARGO_FLECHA * math.sin(angulo - ANGULO_ALAS))
-        flecha_ala2 = (p_destino[0] - LARGO_FLECHA * math.cos(angulo + ANGULO_ALAS), p_destino[1] - LARGO_FLECHA * math.sin(angulo + ANGULO_ALAS))
-        pygame.draw.polygon(pantalla, COLOR_LINEA, [p_destino, flecha_ala1, flecha_ala2])
+        flecha_ala1 = (p_ultimo[0] - LARGO_FLECHA * math.cos(angulo - ANGULO_ALAS), p_ultimo[1] - LARGO_FLECHA * math.sin(angulo - ANGULO_ALAS))
+        flecha_ala2 = (p_ultimo[0] - LARGO_FLECHA * math.cos(angulo + ANGULO_ALAS), p_ultimo[1] - LARGO_FLECHA * math.sin(angulo + ANGULO_ALAS))
+        pygame.draw.polygon(pantalla, COLOR_LINEA, [p_ultimo, flecha_ala1, flecha_ala2])

@@ -138,6 +138,9 @@ def principal():
     # Estado de control para rotación activa
     nodo_rotando = None 
     
+    # 🌟 MEMORIA DEL ESTILO DE FLECHA ELEGIDO (recta o redondeada)
+    estilo_conexion_global = "recta" 
+    
     # Estados de lanzamiento de flechas
     nodo_origen_flecha = None
     llave_punto_origen = None
@@ -244,7 +247,7 @@ def principal():
                             obj_edit.indice_seleccion_inicio = obj_edit.indice_cursor
                         continue
 
-                    # 🌟 ESCAPE: Confirma y sale del modo edición
+                    # ESCAPE: Confirma y sale del modo edición
                     if evento.key == pygame.K_ESCAPE:
                         obj_edit.editando = False
                         obj_edit.indice_seleccion_inicio = obj_edit.indice_cursor
@@ -252,7 +255,7 @@ def principal():
                             nodo_editando = None
                         continue
                     
-                    # 🌟 RETURN (ENTER): Inserta un salto de línea real (\n)
+                    # RETURN (ENTER): Inserta un salto de línea real (\n)
                     elif evento.key == pygame.K_RETURN:
                         borrar_seleccion(obj_edit)
                         obj_edit.texto = obj_edit.texto[:obj_edit.indice_cursor] + "\n" + obj_edit.texto[obj_edit.indice_cursor:]
@@ -337,14 +340,29 @@ def principal():
                         else:
                             item = panel.obtener_item_clickeado(pos)
                             if item:
-                                nuevo_nodo = Nodo(pos_mundo[0], pos_mundo[1], f"{item['tipo']} {len(nodos) + 1}", forma=item["forma"])
-                                nuevo_nodo.color_base = item["color"] 
-                                for n in nodos: n.seleccionado = False
-                                nodos.append(nuevo_nodo)
-                                nodo_arrastrado = nuevo_nodo
-                                nuevo_nodo.seleccionado = True
-                                offset_x, offset_y = nuevo_nodo.rect.x - pos_mundo[0], nuevo_nodo.rect.y - pos_mundo[1]
-                                conexion_seleccionada = None
+                                forma_item = item.get("forma", "")
+                                
+                                # 🌟 NUEVO: Si tocan los botones de estilo, cambiar el modo en vez de crear nodo
+                                if forma_item == "estilo_recta":
+                                    estilo_conexion_global = "recta"
+                                    if conexion_seleccionada:
+                                        conexion_seleccionada.tipo = "recta"
+                                        
+                                elif forma_item == "estilo_curva":
+                                    estilo_conexion_global = "redondeada"
+                                    if conexion_seleccionada:
+                                        conexion_seleccionada.tipo = "redondeada"
+                                        
+                                else:
+                                    # Crear nodo normal
+                                    nuevo_nodo = Nodo(pos_mundo[0], pos_mundo[1], f"{item['tipo']} {len(nodos) + 1}", forma=forma_item)
+                                    nuevo_nodo.color_base = item.get("color", (200, 200, 200))
+                                    for n in nodos: n.seleccionado = False
+                                    nodos.append(nuevo_nodo)
+                                    nodo_arrastrado = nuevo_nodo
+                                    nuevo_nodo.seleccionado = True
+                                    offset_x, offset_y = nuevo_nodo.rect.x - pos_mundo[0], nuevo_nodo.rect.y - pos_mundo[1]
+                                    conexion_seleccionada = None
                     
                     # CASO B: Click en el lienzo de trabajo
                     else:
@@ -372,7 +390,7 @@ def principal():
                                         conexion_seleccionada = None
                                         break
 
-                        # Clic en puntos de anclaje (Solo si no estamos rotando)
+                        # Clic en puntos de anclaje
                         if not clic_en_rotacion and not flecha_origen_flecha:
                             for nodo in reversed(nodos):
                                 if nodo.seleccionado:
@@ -396,28 +414,25 @@ def principal():
                                     conexion_seleccionada = None
                                     tiempo_actual = pygame.time.get_ticks()
                                     
-                                    # SI EL NODO YA SE EDITABA: Hacemos selección de caracteres (NUNCA ARRASTRAMOS EL NODO)
                                     if nodo == nodo_editando and nodo.editando:
                                         idx = calcular_indice_click(nodo, pos[0], pos[1], camara_x, camara_y, fuente)
-                                        if tiempo_actual - ultimo_clic_tiempo < 400: # Doble Clic (Selecciona todo)
+                                        if tiempo_actual - ultimo_clic_tiempo < 400:
                                             nodo.indice_seleccion_inicio = 0
                                             nodo.indice_cursor = len(nodo.texto)
-                                        else: # Clic simple (Inicia arrastre de selección)
+                                        else:
                                             nodo.indice_cursor = idx
                                             nodo.indice_seleccion_inicio = idx
                                             estado_arrastrando_texto = True
-                                    
-                                    # SI EL NODO NO SE EDITABA: Se selecciona y permite arrastrar por el lienzo
                                     else:
                                         if nodo_editando: 
                                             nodo_editando.editando = False
                                         nodo_editando = nodo
                                         
-                                        if tiempo_actual - ultimo_clic_tiempo < 400: # Doble clic inicial lo pasa a edición
+                                        if tiempo_actual - ultimo_clic_tiempo < 400: 
                                             nodo.editando = True
                                             nodo.indice_seleccion_inicio = 0
                                             nodo.indice_cursor = len(nodo.texto)
-                                        else: # Clic simple normal: prepara arrastre del bloque
+                                        else:
                                             nodo_arrastrado = nodo
                                             offset_x, offset_y = nodo.rect.x - pos_mundo[0], nodo.rect.y - pos_mundo[1]
                                         
@@ -430,7 +445,7 @@ def principal():
                                     ultimo_clic_tiempo = tiempo_actual
                                     break 
                         
-                        # Clic en el texto de una línea de flujo
+                        # Clic en el texto o trazado de una línea
                         if not clic_en_nodo and not clic_en_linea and not clic_en_rotacion:
                             mods = pygame.key.get_mods()
                             if not (mods & pygame.KMOD_SHIFT):
@@ -490,7 +505,6 @@ def principal():
                     pos_mundo = (pos[0] + camara_x, pos[1] + camara_y)
                     distancia_arrastre = math.hypot(pos[0] - pos_inicial_clic[0], pos[1] - pos_inicial_clic[1])
                     
-                    # Soltamos arrastre de texto y rotación
                     estado_arrastrando_texto = False
                     nodo_rotando = None 
                     
@@ -502,7 +516,7 @@ def principal():
                     if nodo_arrastrado and distancia_arrastre < 5:
                         nodo_arrastrado.modo_interaccion = "arrow" if nodo_arrastrado.modo_interaccion == "resize" else "resize"
                     
-                    # Conectar flecha nueva
+                    # Conectar flecha nueva (NUEVO: Hereda el estilo global elegido)
                     if nodo_origen_flecha and llave_punto_origen:
                         flecha_anclada = False
                         for nodo_destino in reversed(nodos):
@@ -512,16 +526,16 @@ def principal():
                                     punto_destino_nombre = "centro_izquierda" if pos_mundo[0] < nodo_destino.rect.centerx else "centro_derecha"
                                 
                                 if punto_destino_nombre:
-                                    conexiones.append(Conexion(nodo_origen_flecha, llave_punto_origen, nodo_destino, punto_destino_nombre))
+                                    conexiones.append(Conexion(nodo_origen_flecha, llave_punto_origen, nodo_destino, punto_destino_nombre, tipo=estilo_conexion_global))
                                     flecha_anclada = True
                                     break
                         if not flecha_anclada:
-                            nueva_c = Conexion(nodo_origen_flecha, llave_punto_origen, nodo_destino=None, punto_destino=None)
+                            nueva_c = Conexion(nodo_origen_flecha, llave_punto_origen, nodo_destino=None, punto_destino=None, tipo=estilo_conexion_global)
                             nueva_c.pos_vacio_final = pos_mundo
                             conexiones.append(nueva_c)
                         nodo_origen_flecha = llave_punto_origen = None
 
-                    # Conectar flecha desde otra flecha suelta
+                    # Conectar flecha desde otra flecha suelta (NUEVO: Hereda el estilo)
                     elif flecha_origen_flecha:
                         flecha_anclada = False
                         for nodo_destino in reversed(nodos):
@@ -529,19 +543,18 @@ def principal():
                             if not punto_destino_nombre and nodo_destino.rect.collidepoint(pos_mundo):
                                 punto_destino_nombre = "centro_izquierda" if pos_mundo[0] < nodo_destino.rect.centerx else "centro_derecha"
                             if punto_destino_nombre:
-                                nueva_c = Conexion(nodo_origen=None, punto_origen=None, nodo_destino=nodo_destino, punto_destino=punto_destino_nombre)
+                                nueva_c = Conexion(nodo_origen=None, punto_origen=None, nodo_destino=nodo_destino, punto_destino=punto_destino_nombre, tipo=estilo_conexion_global)
                                 nueva_c.origen_es_flecha = flecha_origen_flecha
                                 conexiones.append(nueva_c)
                                 flecha_anclada = True
                                 break
                         if not flecha_anclada:
-                            nueva_c = Conexion(nodo_origen=None, punto_origen=None, nodo_destino=None, punto_destino=None)
+                            nueva_c = Conexion(nodo_origen=None, punto_origen=None, nodo_destino=None, punto_destino=None, tipo=estilo_conexion_global)
                             nueva_c.origen_es_flecha = flecha_origen_flecha
                             nueva_c.pos_vacio_final = pos_mundo
                             conexiones.append(nueva_c)
                         flecha_origen_flecha = None
 
-                    # Eliminar nodos arrastrados al menú lateral
                     if nodo_arrastrado:
                         centro_pantalla = (nodo_arrastrado.rect.centerx - camara_x, nodo_arrastrado.rect.centery - camara_y)
                         if panel.rect.collidepoint(centro_pantalla):
@@ -554,12 +567,11 @@ def principal():
                     
                     nodo_redimensionando = punto_redimension_nombre = None
 
-            # 6. Movimiento Dinámico del Ratón (MOUSEMOTION ÚNICO)
+            # 6. Movimiento Dinámico del Ratón
             elif evento.type == pygame.MOUSEMOTION:
                 pos = evento.pos
                 pos_mundo = (pos[0] + camara_x, pos[1] + camara_y)
                 
-                # A. Navegación de lienzo
                 if arrastrando_lienzo:
                     dx = pos[0] - ultima_pos_mouse[0]
                     dy = pos[1] - ultima_pos_mouse[1]
@@ -567,25 +579,21 @@ def principal():
                     camara_y -= dy
                     ultima_pos_mouse = pos
                     
-                # B. Escala de panel
                 elif panel.arrastrando_borde:
                     panel.actualizar_ancho(pos[0])
 
-                # C. Arrastre de selección de texto
                 elif estado_arrastrando_texto:
                     obj_edit = next((c for c in conexiones if c.editando), None) or (nodo_editando if (nodo_editando and nodo_editando.editando) else None)
                     if obj_edit:
                         idx = calcular_indice_click(obj_edit, pos[0], pos[1], camara_x, camara_y, fuente)
                         obj_edit.indice_cursor = idx
 
-                # D. Procesar la rotación del nodo
                 elif nodo_rotando:
                     dx = pos_mundo[0] - nodo_rotando.rect.centerx
                     dy = pos_mundo[1] - nodo_rotando.rect.centery
                     angulo_raton = math.degrees(math.atan2(dy, dx))
                     nodo_rotando.angulo = (angulo_raton + nodo_rotando.angulo_offset) % 360
 
-                # E. Escala del nodo
                 elif nodo_redimensionando and punto_redimension_nombre:
                     r = nodo_redimensionando.rect
                     if "derecha" in punto_redimension_nombre or punto_redimension_nombre == "centro_derecha":
@@ -601,7 +609,6 @@ def principal():
                         r.y = min(pos_mundo[1], antiguo_bottom - 20)
                         r.height = antiguo_bottom - r.y
 
-                # F. Arrastre del nodo por el lienzo
                 elif nodo_arrastrado:
                     nueva_pos_x = pos_mundo[0] + offset_x
                     nueva_pos_y = pos_mundo[1] + offset_y
@@ -622,7 +629,6 @@ def principal():
                     pygame.draw.line(pantalla, (255, 120, 0), p0, p1, 5)
             conexion.dibujar(pantalla, fuente, camara_offset=(camara_x, camara_y))
 
-        # Flecha temporal elástica desde un Nodo
         if nodo_origen_flecha and llave_punto_origen:
             pos_raton = pygame.mouse.get_pos()
             ancla_world = nodo_origen_flecha.obtener_puntos_conexion()[llave_punto_origen]
@@ -631,7 +637,6 @@ def principal():
             pygame.draw.line(pantalla, (50, 150, 255), pos_ancla_pantalla, pos_limitada, 2)
             pygame.draw.circle(pantalla, (50, 150, 255), pos_limitada, 4)
 
-        # Flecha temporal elástica desde otra línea suelta
         elif flecha_origen_flecha:
             pos_raton = pygame.mouse.get_pos()
             pos_ancla_pantalla = (flecha_origen_flecha.pos_vacio_final[0] - camara_x, flecha_origen_flecha.pos_vacio_final[1] - camara_y)
@@ -642,7 +647,6 @@ def principal():
         for nodo in nodos: 
             nodo.dibujar(pantalla, fuente, camara_offset=(camara_x, camara_y))
             
-        # Hovering interactivo verde en el tirador de rotación
         pos_m = pygame.mouse.get_pos()
         pos_m_mundo = (pos_m[0] + camara_x, pos_m[1] + camara_y)
         for nodo in nodos:

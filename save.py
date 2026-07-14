@@ -49,7 +49,7 @@ def guardar_diagrama(nodos, conexiones, pantalla, archivo_actual):
                 "texto": getattr(n, "texto", ""),
                 "forma": getattr(n, "forma", "rectangulo"),
                 "color": list(getattr(n, "color_base", (173, 216, 230))),
-                "angulo": getattr(n, "angulo", 0.0)  # 🌟 NUEVO: Guardamos el ángulo del nodo
+                "angulo": getattr(n, "angulo", 0.0)  # Guarda la rotación de los nodos
             })
             
         lista_conexiones = []
@@ -67,7 +67,8 @@ def guardar_diagrama(nodos, conexiones, pantalla, archivo_actual):
                 "pos_vacio_final": list(c.pos_vacio_final) if c.pos_vacio_final else None,
                 "id_flecha_madre": id_flecha_madre,
                 "texto": getattr(c, "texto", ""),
-                "color": list(getattr(c, "color_base", (60, 60, 60)))
+                "color": list(getattr(c, "color_base", (60, 60, 60))),
+                "tipo": getattr(c, "tipo", "recta")  # 🌟 NUEVO: Guardamos si es recta o redondeada
             })
 
         datos = {"nodos": lista_nodos, "conexiones": lista_conexiones}
@@ -95,18 +96,14 @@ def cargar_diagrama(pantalla):
         n_nodos = []
         n_conexiones = []
         
-        # 1. Reconstrucción de Nodos Corregida
+        # 1. Reconstrucción de Nodos
         for n_data in datos.get("nodos", []):
             ancho = n_data.get("w", 120)
             alto = n_data.get("h", 60)
             x_guardada = n_data.get("x", 100)
             y_guardada = n_data.get("y", 100)
             
-            # Creamos el nodo básico. Pasamos el texto al constructor por si es obligatorio,
-            # pero luego lo aseguramos asignándolo directamente abajo.
             nuevo = Nodo(x_guardada + ancho//2, y_guardada + alto//2, n_data.get("texto", ""), w=ancho, h=alto)
-            
-            # 🔥 CORRECCIÓN: Forzamos la carga del texto recuperado directamente en el atributo
             nuevo.texto = n_data.get("texto", "")
             
             if "forma" in n_data: 
@@ -114,7 +111,6 @@ def cargar_diagrama(pantalla):
             if "color" in n_data: 
                 nuevo.color_base = tuple(n_data["color"])
                 
-            # 🌟 NUEVO: Cargamos la rotación (0.0 por defecto para compatibilidad)
             nuevo.angulo = n_data.get("angulo", 0.0)
                 
             n_nodos.append(nuevo)
@@ -128,7 +124,9 @@ def cargar_diagrama(pantalla):
             nodo_origen = n_nodos[id_origen] if id_origen != -1 and id_origen < len(n_nodos) else None
             nodo_destino = n_nodos[id_destino] if id_destino != -1 and id_destino < len(n_nodos) else None
             
-            nueva_c = Conexion(nodo_origen, c_data.get("punto_origen"), nodo_destino, c_data.get("punto_destino"))
+            # 🌟 NUEVO: Leemos el tipo de flecha (asume "recta" por defecto si es un JSON viejo)
+            tipo_guardado = c_data.get("tipo", "recta")
+            nueva_c = Conexion(nodo_origen, c_data.get("punto_origen"), nodo_destino, c_data.get("punto_destino"), tipo=tipo_guardado)
             
             nueva_c.texto = c_data.get("texto", "") 
             if "color" in c_data:

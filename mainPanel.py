@@ -1,4 +1,5 @@
 import pygame
+import math
 from utils.macos_palette import MacColorPicker  
 
 class MainPanel:
@@ -18,8 +19,9 @@ class MainPanel:
         self.items_flujo = [
             {"tipo": "Proceso", "forma": "rectangulo", "color": (173, 216, 230)},
             {"tipo": "Decisión", "forma": "rombo", "color": (255, 200, 150)},
-            {"tipo": "Flecha", "forma": "linea", "color": (50, 120, 240)},
-            {"tipo": "Texto", "forma": "texto", "color": (250, 250, 250)}
+            {"tipo": "F. Recta", "forma": "estilo_recta", "color": (50, 120, 240)},
+            {"tipo": "F. Curva", "forma": "estilo_curva", "color": (50, 120, 240)},
+            {"tipo": "Texto", "forma": "texto", "color": (30, 30, 30)}
         ]
         self.items_datos = [
             {"tipo": "Base Datos", "forma": "rectangulo", "color": (230, 190, 255)},
@@ -231,16 +233,43 @@ class MainPanel:
             ]
             pygame.draw.polygon(pantalla, color, puntos_rombo)
             pygame.draw.polygon(pantalla, (50, 50, 50), puntos_rombo, grosor_borde)
-        elif forma == "linea":
+            
+        # 🌟 NUEVO: ICONO PARA FLECHA RECTA
+        elif forma == "estilo_recta":
+            # Fondo de botón interactivo (tipo "herramienta" y no nodo)
+            pygame.draw.rect(pantalla, (245, 245, 245), r, border_radius=8)
+            pygame.draw.rect(pantalla, (180, 180, 185) if grosor_borde == 2 else (100, 150, 250), r, 2, border_radius=8)
+            
             cx = r.centerx
-            y_inicio = r.top + 6
-            y_fin = r.bottom - 18
+            y_inicio = r.top + 10
+            y_fin = r.bottom - 22
             pygame.draw.line(pantalla, color, (cx, y_inicio), (cx, y_fin), 3)
-            tam = 6
-            rect_sup = pygame.Rect(cx - tam//2, y_inicio - tam//2, tam, tam)
-            rect_inf = pygame.Rect(cx - tam//2, y_fin - tam//2, tam, tam)
-            pygame.draw.rect(pantalla, color, rect_sup)
-            pygame.draw.rect(pantalla, color, rect_inf)
+            # Dibujar la punta de flecha
+            pygame.draw.polygon(pantalla, color, [(cx, y_fin), (cx-5, y_fin-7), (cx+5, y_fin-7)])
+            
+        # 🌟 NUEVO: ICONO PARA FLECHA CURVA (BEZIER)
+        elif forma == "estilo_curva":
+            # Fondo de botón interactivo
+            pygame.draw.rect(pantalla, (245, 245, 245), r, border_radius=8)
+            pygame.draw.rect(pantalla, (180, 180, 185) if grosor_borde == 2 else (100, 150, 250), r, 2, border_radius=8)
+            
+            cx = r.centerx
+            y_inicio = r.top + 10
+            y_fin = r.bottom - 22
+            
+            # Dibujar una curva en forma de S muy suave
+            puntos = []
+            for i in range(20):
+                t = i / 19.0
+                x = cx - 12 * math.cos(t * math.pi)
+                y = y_inicio + t * (y_fin - y_inicio)
+                puntos.append((x, y))
+                
+            pygame.draw.lines(pantalla, color, False, puntos, 3)
+            # Punta de flecha apuntando hacia abajo
+            px, py = puntos[-1]
+            pygame.draw.polygon(pantalla, color, [(px, py), (px-5, py-7), (px+5, py-7)])
+            
         elif forma == "texto":
             pygame.draw.rect(pantalla, (255, 255, 255), r, border_radius=8)
             pygame.draw.rect(pantalla, (160, 160, 165), r, 1, border_radius=8)
@@ -251,8 +280,9 @@ class MainPanel:
 
         # Etiqueta de texto del botón
         superficie_texto = fuente.render(tipo, True, (10, 10, 10))
-        if forma in ["linea", "texto"]:
-            text_rect = superficie_texto.get_rect(center=(r.centerx, r.bottom - 8))
+        # Desplazamos el texto hacia abajo para los botones de configuración y texto
+        if forma in ["linea", "texto", "estilo_recta", "estilo_curva"]:
+            text_rect = superficie_texto.get_rect(center=(r.centerx, r.bottom - 10))
         else:
             text_rect = superficie_texto.get_rect(center=r.center)
         pantalla.blit(superficie_texto, text_rect)
@@ -305,7 +335,6 @@ class MainPanel:
         if self.contraido:
             return None
             
-        # 🌟 COMPROBACIÓN ROBUSTA: Busca de forma limpia en cualquier grupo expandido
         if self.expandida_flujo:
             for item in self.items_flujo:
                 if item["rect"].collidepoint(pos):
