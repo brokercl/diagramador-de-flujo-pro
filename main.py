@@ -105,6 +105,7 @@ def principal():
     
     estado_arrastrando_texto = False
     arrastrando_punto_curva = False # 🌟 NUEVO: Estado para arrastrar la Bezier
+    arrastrando_punta_destino = False  # 🌟 NUEVO: Estado para redireccionar puntas
 
     while True:
         pantalla.fill((245, 245, 245))
@@ -289,6 +290,20 @@ def principal():
                                         conexion_seleccionada = None
                                         break
 
+                        # 🌟 NUEVO: Detectar clic en la PUNTA AZUL (Redirección) o PUNTITO VERDE (Manija Bezier)
+                        if not flecha_origen_flecha and conexion_seleccionada:
+                            if conexion_seleccionada.verificar_clic_punta_destino(pos_mundo):
+                                arrastrando_punta_destino = True
+                                clic_en_linea = True
+                            elif conexion_seleccionada.verificar_clic_punto_control(pos_mundo):
+                                tiempo_actual = pygame.time.get_ticks()
+                                if tiempo_actual - ultimo_clic_tiempo < 400: # Doble clic: Resetea
+                                    conexion_seleccionada.desplazamiento_curva = [0, 0]
+                                else:
+                                    arrastrando_punto_curva = True # Clic simple: Arrastra
+                                clic_en_linea = True
+                                ultimo_clic_tiempo = tiempo_actual
+
                         if not clic_en_rotacion and not flecha_origen_flecha and not clic_en_linea:
                             for nodo in reversed(nodos):
                                 if nodo.seleccionado:
@@ -367,8 +382,28 @@ def principal():
                     
                     estado_arrastrando_texto = False
                     nodo_rotando = None 
-                    arrastrando_punto_curva = False # 🌟 Soltar punto de control
+
+                    arrastrando_punto_curva = False # Soltar punto de control
                     
+                    # 🌟 NUEVO: Soltar y reconectar la punta de la flecha de forma dinámica
+                    if arrastrando_punta_destino and conexion_seleccionada:
+                        flecha_anclada = False
+                        for nodo_destino in reversed(nodos):
+                            punto_destino_nombre = nodo_destino.verificar_clic_puntos(pos_mundo)
+                            if not punto_destino_nombre and nodo_destino.rect.collidepoint(pos_mundo):
+                                punto_destino_nombre = "centro_izquierda" if pos_mundo[0] < nodo_destino.rect.centerx else "centro_derecha"
+                            if punto_destino_nombre:
+                                conexion_seleccionada.destino = nodo_destino
+                                conexion_seleccionada.punto_destino = punto_destino_nombre
+                                conexion_seleccionada.pos_vacio_final = None
+                                flecha_anclada = True
+                                break
+                        if not flecha_anclada:
+                            conexion_seleccionada.pos_vacio_final = pos_mundo
+                            conexion_seleccionada.destino = None
+                            conexion_seleccionada.punto_destino = None
+                        arrastrando_punta_destino = False
+
                     if panel.arrastrando_borde:
                         panel.arrastrando_borde = False
                         if distancia_arrastre < 6: panel.conmutar_colapso()
@@ -464,6 +499,12 @@ def principal():
                     dx, dy = nueva_pos_x - nodo_arrastrado.rect.x, nueva_pos_y - nodo_arrastrado.rect.y
                     for nodo in nodos:
                         if nodo.seleccionado: nodo.rect.x += dx; nodo.rect.y += dy
+
+                # 🌟 NUEVO: Mover la punta de la flecha si se está redireccionando
+                elif arrastrando_punta_destino and conexion_seleccionada:
+                    conexion_seleccionada.destino = None
+                    conexion_seleccionada.punto_destino = None
+                    conexion_seleccionada.pos_vacio_final = pos_mundo
 
         # La línea base de renderizado naranja de las conexiones la metimos en el 'dibujar' 
         # de elements.py para que respete las curvas perfectamente.

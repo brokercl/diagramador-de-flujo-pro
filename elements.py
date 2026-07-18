@@ -437,5 +437,16 @@ class Conexion:
 
         # 🌟 NUEVO: Dibujar el "puntito" interactivo si la flecha está seleccionada
         if self.seleccionada:
+            # Manija central verde (Curva Bezier)
             pygame.draw.circle(pantalla, (46, 204, 113), (int(p_control_pantalla[0]), int(p_control_pantalla[1])), 6)
             pygame.draw.circle(pantalla, (255, 255, 255), (int(p_control_pantalla[0]), int(p_control_pantalla[1])), 4)
+            
+            # 🌟 NUEVO: Manija en la punta de la flecha (Azul) para redireccionar
+            pygame.draw.circle(pantalla, (50, 150, 255), (int(p_ultimo[0]), int(p_ultimo[1])), 6)
+            pygame.draw.circle(pantalla, (255, 255, 255), (int(p_ultimo[0]), int(p_ultimo[1])), 4)            
+
+    def verificar_clic_punta_destino(self, pos_mundo, margen_error=12):
+        """🌟 NUEVO: Verifica si hiciste clic en la punta misma de la flecha (coordenadas mundo)"""
+        puntos = self.obtener_todos_los_puntos()
+        if len(puntos) < 2: return False
+        return math.hypot(pos_mundo[0] - puntos[1][0], pos_mundo[1] - puntos[1][1]) <= margen_error
